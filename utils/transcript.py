@@ -1,6 +1,24 @@
 from youtube_transcript_api import YouTubeTranscriptApi
 
 
+def extract_video_id(video_url: str) -> str:
+    """
+    Extract video ID from YouTube URL.
+    
+    Args:
+        video_url: YouTube video URL (full URL or video ID)
+    
+    Returns:
+        str: Video ID
+    """
+    if "v=" in video_url:
+        return video_url.split("v=")[-1].split("&")[0]
+    elif "youtu.be/" in video_url:
+        return video_url.split("youtu.be/")[-1].split("?")[0]
+    else:
+        return video_url  # Assume it's already a video ID
+
+
 def get_transcript(video_url: str):
     """
     Extract transcript from YouTube video URL.
@@ -13,12 +31,7 @@ def get_transcript(video_url: str):
     """
     try:
         # Extract video ID from URL
-        if "v=" in video_url:
-            video_id = video_url.split("v=")[-1].split("&")[0]
-        elif "youtu.be/" in video_url:
-            video_id = video_url.split("youtu.be/")[-1].split("?")[0]
-        else:
-            video_id = video_url  # Assume it's already a video ID
+        video_id = extract_video_id(video_url)
         
         # Get transcript using the new API
         # Try French first, automatically fall back to English if not available

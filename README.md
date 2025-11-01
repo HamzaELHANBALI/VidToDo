@@ -38,6 +38,7 @@ A Streamlit app that extracts actionable steps and summaries from YouTube tutori
 - 🧠 Generate summary using GPT-4o-mini
 - ✅ Extract actionable steps with timestamps
 - 💻 Capture code snippets when mentioned
+- 💾 **Smart caching**: Videos are cached for 24 hours - reprocessing the same video won't consume OpenAI tokens!
 
 ## 🛠️ Project Structure
 
@@ -65,7 +66,7 @@ youtube-action-extractor/
 
 - [ ] Add Whisper fallback for videos without transcripts
 - [ ] Export results to Markdown/Notion/TXT
-- [ ] Add caching to avoid re-fetching transcripts
+- [x] Add caching to avoid re-fetching transcripts and OpenAI API calls
 - [ ] Progress bars and better UI styling
 - [ ] Support for playlist URLs
 
