@@ -7,11 +7,74 @@ import json
 st.set_page_config(
     page_title="YouTube Action Extractor",
     page_icon="🎬",
-    layout="centered"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-st.title("🎬 YouTube Action Extractor")
-st.markdown("Paste a YouTube URL to extract actionable steps and a summary from tutorial videos.")
+# Custom CSS for better styling
+st.markdown("""
+<style>
+    .main-header {
+        text-align: center;
+        padding: 1.5rem 0 0.5rem 0;
+        color: #1f2937;
+        font-size: 2.5rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        margin-bottom: 0.5rem;
+    }
+    .sub-header {
+        text-align: center;
+        color: #6b7280;
+        padding-bottom: 1.5rem;
+        font-size: 1.1rem;
+        font-weight: 400;
+    }
+    .info-box {
+        padding: 1rem;
+        border-radius: 0.5rem;
+        background-color: #f0f2f6;
+        border-left: 4px solid #667eea;
+        margin: 1rem 0;
+        color: #333 !important;
+    }
+    .info-box p, .info-box b, .info-box {
+        color: #333 !important;
+        margin: 0;
+    }
+    .step-card {
+        padding: 1.5rem;
+        margin: 1rem 0;
+        border-radius: 0.75rem;
+        background-color: #ffffff;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-left: 4px solid #667eea;
+    }
+    .summary-card {
+        padding: 1.5rem;
+        border-radius: 0.75rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        margin: 1rem 0;
+    }
+    .stButton>button {
+        width: 100%;
+        border-radius: 0.5rem;
+        height: 3rem;
+        font-size: 1.1rem;
+    }
+    .metric-card {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        text-align: center;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Header - Clean and modern
+st.markdown('<h1 class="main-header">🎬 YouTube Action Extractor</h1>', unsafe_allow_html=True)
+st.markdown('<p class="sub-header">Transform YouTube tutorials into actionable step-by-step guides with AI</p>', unsafe_allow_html=True)
 
 # Cache configuration - cache by video ID to avoid reprocessing
 @st.cache_data(ttl=3600)  # Cache transcripts for 1 hour
@@ -27,9 +90,28 @@ def get_cached_analysis(video_id: str, transcript: str):
     except Exception as e:
         raise Exception(f"Error calling OpenAI API: {e}")
 
-url = st.text_input("Paste a YouTube video link", placeholder="https://www.youtube.com/watch?v=...")
+# Input section with better styling
+st.markdown("---")
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    url = st.text_input(
+        "📺 YouTube Video URL", 
+        placeholder="https://www.youtube.com/watch?v=...",
+        label_visibility="visible"
+    )
+    
+    st.markdown(
+        '<div class="info-box" style="color: #333; background-color: #e8f4f8; padding: 1rem; border-radius: 0.5rem; border-left: 4px solid #667eea; margin-bottom: 1rem;">'
+        '<span style="color: #333;"><strong>💡 Tip:</strong> Supports French and English videos. Results are cached for 24 hours to save tokens!</span>'
+        '</div>', 
+        unsafe_allow_html=True
+    )
 
-if st.button("Analyze Video", type="primary"):
+col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
+with col_btn2:
+    analyze_button = st.button("🚀 Analyze Video", type="primary", use_container_width=True)
+
+if analyze_button:
     if not url:
         st.warning("Please enter a YouTube URL")
         st.stop()
@@ -46,46 +128,92 @@ if st.button("Analyze Video", type="primary"):
         transcript = get_cached_transcript(video_id)
     
     if transcript.startswith("Error"):
-        st.error(transcript)
+        st.error(f"❌ {transcript}")
     else:
         # Get cached analysis (won't call OpenAI API if already cached - saves tokens!)
-        with st.spinner("Analyzing with GPT..."):
+        with st.spinner("🤖 Analyzing with AI..."):
             try:
                 actions, summary = get_cached_analysis(video_id, transcript)
             except Exception as e:
-                st.error(str(e))
+                st.error(f"❌ Error: {str(e)}")
                 st.stop()
 
-        # Display Summary
-        st.subheader("🧠 Summary")
-        st.write(summary)
+        st.markdown("---")
+        
+        # Video metrics
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("📹 Video ID", video_id[:20] + "...")
+        with col2:
+            steps = parse_actions_json(actions)
+            st.metric("📋 Steps Found", len(steps) if steps else 0)
+        with col3:
+            transcript_length = len(transcript.split())
+            st.metric("📝 Transcript Words", f"{transcript_length:,}")
+
+        # Display Summary in a styled card
+        st.markdown("---")
+        st.markdown("### 🧠 Video Summary")
+        with st.container():
+            st.markdown(f'<div class="summary-card"><p style="margin:0; font-size:1.1rem;">{summary}</p></div>', unsafe_allow_html=True)
 
         # Display Actionable Steps
-        st.subheader("✅ Actionable Steps")
-        steps = parse_actions_json(actions)
+        st.markdown("---")
+        st.markdown("### ✅ Actionable Steps")
         
-        if steps:
-            for idx, step in enumerate(steps, 1):
-                with st.container():
-                    timestamp = step.get("timestamp", "N/A")
-                    step_text = step.get("step", "")
-                    code = step.get("code", "")
-                    
-                    st.markdown(f"**Step {idx}** ({timestamp}) — {step_text}")
-                    
-                    if code and code.strip():
-                        st.code(code, language="python")
-                    
-                    st.divider()
+        if not steps:
+            st.warning("⚠️ No actionable steps found in this video.")
         else:
-            # Fallback: display raw JSON if parsing failed
-            st.text("Raw output:")
-            st.text(actions)
+            st.info(f"📊 Found {len(steps)} actionable step(s) from this video")
+        
+        # Display steps in styled cards
+        for idx, step in enumerate(steps, 1):
+            timestamp = step.get("timestamp", "N/A")
+            step_text = step.get("step", "")
+            code = step.get("code", "")
             
-            # Try to parse as direct JSON
-            try:
-                parsed = json.loads(actions)
-                st.json(parsed)
-            except:
-                pass
+            # Step card with better styling
+            with st.container():
+                st.markdown(
+                    f"""
+                    <div class="step-card">
+                        <h3>Step {idx} ⏱️ <code>{timestamp}</code></h3>
+                        <p><strong>📝 Action:</strong> {step_text}</p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+                
+                if code and code.strip():
+                    st.markdown("**💻 Code Snippet:**")
+                    st.code(code, language="python")
+            
+            if idx < len(steps):
+                st.markdown("<br>", unsafe_allow_html=True)
+        
+        # Sidebar with info
+        with st.sidebar:
+            st.markdown("### ℹ️ About")
+            st.markdown("""
+            **YouTube Action Extractor** transforms tutorial videos into:
+            - ✅ Clear step-by-step guides
+            - 📋 Actionable items with timestamps
+            - 💻 Code snippets (when available)
+            - 🧠 Quick summaries
+            """)
+            
+            st.markdown("### ⚡ Features")
+            st.markdown("""
+            - 🌍 French & English support
+            - 💾 Smart caching (24h)
+            - 🤖 Powered by GPT-4o-mini
+            - ⚡ Fast & efficient
+            """)
+            
+            st.markdown("### 🔒 Privacy")
+            st.markdown("""
+            - API keys stay secure
+            - No video data stored
+            - Cached locally only
+            """)
 
