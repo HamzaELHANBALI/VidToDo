@@ -49,6 +49,24 @@ st.markdown("""
         background-color: #ffffff;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         border-left: 4px solid #667eea;
+        color: #1f2937 !important;
+    }
+    .step-card h3, .step-card p, .step-card * {
+        color: #1f2937 !important;
+    }
+    .step-card code {
+        background-color: #e8f4f8 !important;
+        color: #667eea !important;
+        padding: 0.25rem 0.5rem !important;
+        border-radius: 0.25rem !important;
+        font-weight: 600 !important;
+    }
+    /* Fix code tags in general to have better contrast */
+    code {
+        background-color: #f3f4f6 !important;
+        color: #667eea !important;
+        padding: 0.2rem 0.4rem !important;
+        border-radius: 0.25rem !important;
     }
     .summary-card {
         padding: 1.5rem;
@@ -155,8 +173,54 @@ if analyze_button:
         st.markdown("---")
         st.markdown("### 🧠 Video Summary")
         with st.container():
-            st.markdown(f'<div class="summary-card"><p style="margin:0; font-size:1.1rem;">{summary}</p></div>', unsafe_allow_html=True)
+            # Process summary to add line breaks for bullets
+            # First, normalize newlines
+            summary_formatted = summary.replace('\r\n', '\n').replace('\r', '\n')
+            
+            # Handle bullet points - ensure they're on separate lines
+            summary_formatted = summary_formatted.replace('• ', '\n• ').replace('- ', '\n- ').replace('* ', '\n* ')
+            
+            # Split by newlines and process each line
+            lines = summary_formatted.split('\n')
+            formatted_lines = []
+            for line in lines:
+                line = line.strip()
+                if line:  # Skip empty lines
+                    formatted_lines.append(line)
+            
+            # Join with HTML breaks
+            summary_html = '<br>'.join(formatted_lines)
+            
+            st.markdown(f'<div class="summary-card"><p style="margin:0; font-size:1.1rem; line-height:1.8; white-space: pre-wrap;">{summary_html}</p></div>', unsafe_allow_html=True)
 
+        # Parse tools if available
+        try:
+            parsed_actions = json.loads(actions)
+            tools = parsed_actions.get("tools", [])
+        except:
+            tools = []
+        
+        # Display Tools Section (if any tools mentioned)
+        if tools:
+            st.markdown("---")
+            st.markdown("### 🛠️ Tools & Technologies")
+            st.info(f"📦 Found {len(tools)} tool(s) discussed in this video")
+            
+            for tool in tools:
+                tool_name = tool.get("name", "Unknown Tool")
+                tool_timestamp = tool.get("timestamp", "N/A")
+                tool_purpose = tool.get("purpose", "")
+                tool_context = tool.get("context", "")
+                tool_usage = tool.get("usage", "")
+                
+                with st.expander(f"🔧 **{tool_name}** ⏱️ `{tool_timestamp}`", expanded=True):
+                    if tool_purpose:
+                        st.markdown(f"**🎯 Purpose:** {tool_purpose}")
+                    if tool_context:
+                        st.markdown(f"**📖 Context:** {tool_context}")
+                    if tool_usage:
+                        st.markdown(f"**⚙️ Usage:** {tool_usage}")
+        
         # Display Actionable Steps
         st.markdown("---")
         st.markdown("### ✅ Actionable Steps")
@@ -171,18 +235,23 @@ if analyze_button:
             timestamp = step.get("timestamp", "N/A")
             step_text = step.get("step", "")
             code = step.get("code", "")
+            tool_context = step.get("tool_context", "")
             
             # Step card with better styling
             with st.container():
                 st.markdown(
                     f"""
-                    <div class="step-card">
-                        <h3>Step {idx} ⏱️ <code>{timestamp}</code></h3>
-                        <p><strong>📝 Action:</strong> {step_text}</p>
+                    <div class="step-card" style="color: #1f2937;">
+                        <h3 style="color: #1f2937;">Step {idx} ⏱️ <code style="background-color: #e8f4f8; color: #667eea; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-weight: 600;">{timestamp}</code></h3>
+                        <p style="color: #1f2937;"><strong>📝 Action:</strong> {step_text}</p>
                     </div>
                     """,
                     unsafe_allow_html=True
                 )
+                
+                # Display tool context if mentioned in this step
+                if tool_context and tool_context.strip():
+                    st.markdown(f"**🛠️ Tool Context:** {tool_context}")
                 
                 if code and code.strip():
                     st.markdown("**💻 Code Snippet:**")

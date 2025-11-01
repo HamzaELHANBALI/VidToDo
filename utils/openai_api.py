@@ -45,15 +45,34 @@ def extract_actions_and_summary(transcript: str):
     action_prompt = f"""
 You are an AI engineer that extracts clear, actionable steps from YouTube tutorials.
 
-From this transcript, list concise steps with timestamps and code (if mentioned).
+From this transcript, extract:
+1. Actionable steps with timestamps and code (if mentioned)
+2. Tools mentioned in the video - when a tool (like Super Whisper, API, library, framework, etc.) is discussed, capture:
+   - The tool name
+   - Why it's being used (the purpose/context)
+   - What part/aspect of the tool is being explained
+   - How it fits into the overall workflow
+
+IMPORTANT: If tools are mentioned, provide detailed context about their usage. Don't just mention the tool name - explain why it's needed and how it's used.
 
 Return JSON in this exact format:
 {{
   "steps": [
-    {{ "step": "string", "timestamp": "mm:ss", "code": "optional code snippet" }},
-    {{ "step": "string", "timestamp": "mm:ss", "code": "" }}
+    {{ "step": "string", "timestamp": "mm:ss", "code": "optional code snippet", "tool_context": "optional - explain tool usage if mentioned" }},
+    {{ "step": "string", "timestamp": "mm:ss", "code": "", "tool_context": "" }}
+  ],
+  "tools": [
+    {{
+      "name": "tool name",
+      "timestamp": "mm:ss",
+      "purpose": "why this tool is used",
+      "context": "what aspect/part is explained",
+      "usage": "how it fits in the workflow"
+    }}
   ]
 }}
+
+Note: If no tools are mentioned, return an empty "tools" array. The "tool_context" field in steps should explain any tool usage mentioned in that specific step.
 
 Transcript:
 {transcript_snippet}
