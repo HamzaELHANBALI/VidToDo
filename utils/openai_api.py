@@ -5,7 +5,24 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# Get API key from Streamlit secrets (for cloud deployment) or environment variable (for local)
+def get_openai_api_key():
+    """Get OpenAI API key from Streamlit secrets or environment variable."""
+    try:
+        # Try Streamlit secrets first (works on Streamlit Cloud)
+        import streamlit as st
+        return st.secrets["OPENAI_API_KEY"]
+    except (KeyError, AttributeError, RuntimeError, ImportError):
+        # Fallback to environment variable (works locally with .env file)
+        return os.getenv("OPENAI_API_KEY")
+
+# Initialize client lazily to avoid issues with st.secrets at module level
+def get_openai_client():
+    """Get OpenAI client with API key from secrets or environment."""
+    api_key = get_openai_api_key()
+    if not api_key:
+        raise ValueError("OPENAI_API_KEY not found in Streamlit secrets or environment variables. Please set it in .env file (local) or Streamlit Cloud secrets (deployment).")
+    return OpenAI(api_key=api_key)
 
 
 def extract_actions_and_summary(transcript: str):
@@ -18,6 +35,9 @@ def extract_actions_and_summary(transcript: str):
     Returns:
         tuple: (actions_json_string, summary_string)
     """
+    # Get client (will load API key from secrets or env)
+    client = get_openai_client()
+    
     # Truncate transcript if too long (to avoid token limits)
     transcript_snippet = transcript[:10000] if len(transcript) > 10000 else transcript
     

@@ -21,8 +21,10 @@ def get_transcript(video_url: str):
             video_id = video_url  # Assume it's already a video ID
         
         # Get transcript using the new API
+        # Try French first, automatically fall back to English if not available
         api = YouTubeTranscriptApi()
-        transcript_obj = api.fetch(video_id)
+        # languages parameter: tries French first, then English if French not available
+        transcript_obj = api.fetch(video_id, languages=('fr', 'en'))
         transcript_data = transcript_obj.to_raw_data()
         
         # Extract text from transcript data
