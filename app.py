@@ -171,7 +171,18 @@ if analyze_button:
         transcript = get_cached_transcript(video_id)
     
     if transcript.startswith("Error"):
-        st.error(f"❌ {transcript}")
+        # Format error message with better styling
+        st.error("❌ **Transcript Error**")
+        # Split multi-line errors for better readability
+        error_lines = transcript.split("\n")
+        for line in error_lines:
+            if line.strip():
+                if line.strip().startswith("Error:"):
+                    st.warning(line.strip())
+                elif any(bullet in line for bullet in ["•", "-", "Solutions:", "What you can do:"]):
+                    st.markdown(f"• {line.strip()}")
+                else:
+                    st.info(line.strip())
     else:
         # Get cached analysis (won't call OpenAI API if already cached - saves tokens!)
         with st.spinner("🤖 Analyzing with AI..."):
