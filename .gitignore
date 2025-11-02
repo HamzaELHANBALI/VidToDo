@@ -51,6 +51,9 @@ coverage.xml
 # OS
 Thumbs.db
 
+# Cache directory (local persistent cache)
+.cache/
+
 # Documentation (local only - keep README.md on GitHub)
 DEPLOY.md
 QUICK_DEPLOY_GUIDE.md

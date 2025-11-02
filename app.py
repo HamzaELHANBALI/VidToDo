@@ -94,17 +94,42 @@ st.markdown("""
 st.markdown('<h1 class="main-header">🎬 YouTube Action Extractor</h1>', unsafe_allow_html=True)
 st.markdown('<p class="sub-header">Transform YouTube tutorials into actionable step-by-step guides with AI</p>', unsafe_allow_html=True)
 
-# Cache configuration - cache by video ID to avoid reprocessing
-@st.cache_data(ttl=3600)  # Cache transcripts for 1 hour
-def get_cached_transcript(video_id: str):
-    """Cached transcript fetching by video ID."""
-    return get_transcript(video_id)
+# Import local file-based cache
+from utils.cache import load_from_cache, save_to_cache
 
-@st.cache_data(ttl=86400)  # Cache OpenAI analysis for 24 hours (save tokens!)
+# Cache configuration - dual caching: Streamlit (in-memory) + local file (persistent)
+@st.cache_data(ttl=3600)  # Streamlit cache for speed
+def get_cached_transcript(video_id: str):
+    """Cached transcript fetching by video ID with persistent local cache."""
+    # Check local file cache first (survives app restarts)
+    cached = load_from_cache('transcript', video_id, ttl=3600)
+    if cached is not None:
+        return cached
+    
+    # Not in cache, fetch from YouTube
+    transcript = get_transcript(video_id)
+    
+    # Save to local cache for persistence
+    save_to_cache('transcript', video_id, transcript)
+    
+    return transcript
+
+@st.cache_data(ttl=86400)  # Streamlit cache for speed
 def get_cached_analysis(video_id: str, transcript: str):
-    """Cached OpenAI analysis by video ID - won't call API if already processed."""
+    """Cached OpenAI analysis with persistent local file cache."""
+    # Check local file cache first (survives app restarts)
+    cached = load_from_cache('analysis', video_id, ttl=86400)
+    if cached is not None:
+        return tuple(cached) if isinstance(cached, list) else cached
+    
+    # Not in cache, call OpenAI API
     try:
-        return extract_actions_and_summary(transcript)
+        actions, summary = extract_actions_and_summary(transcript)
+        
+        # Save to local cache for persistence
+        save_to_cache('analysis', video_id, [actions, summary])
+        
+        return actions, summary
     except Exception as e:
         raise Exception(f"Error calling OpenAI API: {e}")
 
